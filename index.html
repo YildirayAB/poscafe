@@ -156,13 +156,22 @@
     /* Responsive grid */
     @media (max-width: 768px) {
       .product-grid { grid-template-columns: repeat(2, 1fr) !important; }
-      .main-layout { flex-direction: column !important; }
+      .main-layout { flex-direction: column !important; padding-bottom: 80px; }
       .sidebar-cart { 
-        position: fixed; bottom: 0; left: 0; right: 0; 
-        max-height: 60vh; z-index: 40;
+        position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; top: auto !important;
+        max-height: 80vh !important; z-index: 40 !important;
         border-radius: 20px 20px 0 0 !important;
-        box-shadow: 0 -4px 20px rgba(0,0,0,0.1) !important;
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.2) !important;
+        transform: translateY(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
+      .sidebar-cart.mobile-open {
+        transform: translateY(0);
+      }
+    }
+
+    @media (min-width: 769px) {
+      .sidebar-cart { transform: none !important; }
     }
 
     @media (max-width: 480px) {
@@ -249,6 +258,9 @@
     </div>
   </header>
 
+  <!-- Mobile Cart Overlay -->
+  <div id="cartOverlay" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-30 opacity-0 pointer-events-none transition-opacity duration-300 sm:hidden" onclick="toggleMobileCart()"></div>
+
   <!-- ═══════════════════════════════════════ -->
   <!-- MAIN LAYOUT                             -->
   <!-- ═══════════════════════════════════════ -->
@@ -296,9 +308,16 @@
             </svg>
             <h2 class="font-bold text-base">Keranjang</h2>
           </div>
-          <button onclick="clearCart()" class="text-white/70 hover:text-white text-xs font-medium px-2 py-1 rounded-lg hover:bg-white/10 transition-colors" id="clearCartBtn" style="display:none;">
-            Hapus Semua
-          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="clearCart()" class="text-white/70 hover:text-white text-xs font-medium px-2 py-1 rounded-lg hover:bg-white/10 transition-colors" id="clearCartBtn" style="display:none;">
+              Hapus Semua
+            </button>
+            <button onclick="toggleMobileCart()" class="sm:hidden text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="flex items-center gap-2 mt-2 text-blue-100 text-xs">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -939,6 +958,12 @@
         document.getElementById('orderNotes').value = '';
         updateCart();
         renderProducts();
+        
+        // Tutup cart di mobile jika terbuka
+        const sidebar = document.getElementById('cartSidebar');
+        if (sidebar.classList.contains('mobile-open')) {
+          toggleMobileCart();
+        }
       } else {
         showPaymentFailed();
       }
@@ -1134,14 +1159,20 @@
     // ──────────────────────────────────────
     // MOBILE CART TOGGLE
     // ──────────────────────────────────────
-    let mobileCartOpen = false;
     function toggleMobileCart() {
       const sidebar = document.getElementById('cartSidebar');
-      mobileCartOpen = !mobileCartOpen;
-      if (mobileCartOpen) {
-        sidebar.style.transform = 'translateY(0)';
+      const overlay = document.getElementById('cartOverlay');
+      
+      const isOpen = sidebar.classList.toggle('mobile-open');
+      
+      if (isOpen) {
+        overlay.classList.remove('opacity-0', 'pointer-events-none');
+        overlay.classList.add('opacity-100', 'pointer-events-auto');
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
       } else {
-        sidebar.style.transform = 'translateY(100%)';
+        overlay.classList.add('opacity-0', 'pointer-events-none');
+        overlay.classList.remove('opacity-100', 'pointer-events-auto');
+        document.body.style.overflow = '';
       }
     }
 
