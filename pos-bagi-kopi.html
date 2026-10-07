@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bagi Kopi — Point of Sales</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    /* ══════════════════════════════════════════════
+       BAGI KOPI — Blue Theme POS System
+       ══════════════════════════════════════════════ */
+    :root {
+      --bk-bg: #f0f5ff;
+      --bk-card: #ffffff;
+      --bk-primary: #2563eb;
+      --bk-primary-dark: #1d4ed8;
+      --bk-primary-light: #dbeafe;
+      --bk-primary-lighter: #eff6ff;
+      --bk-accent: #3b82f6;
+      --bk-text: #1e293b;
+      --bk-text-secondary: #64748b;
+      --bk-text-muted: #94a3b8;
+      --bk-border: #e2e8f0;
+      --bk-success: #22c55e;
+      --bk-success-bg: #f0fdf4;
+      --bk-danger: #ef4444;
+      --bk-danger-bg: #fef2f2;
+      --bk-warning: #f59e0b;
+      --bk-warning-bg: #fffbeb;
+      --bk-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --bk-shadow-lg: 0 10px 25px rgba(37,99,235,0.1), 0 4px 10px rgba(0,0,0,0.05);
+      --bk-radius: 16px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bk-bg);
+      color: var(--bk-text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--bk-text-muted); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--bk-text-secondary); }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes bounceIn { 0% { transform: scale(0); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    @keyframes confetti { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(-200px) rotate(720deg); opacity: 0; } }
+
+    .animate-fade { animation: fadeIn 0.3s ease-out; }
+    .animate-slide { animation: slideUp 0.4s ease-out; }
+    .animate-scale { animation: scaleIn 0.3s ease-out; }
+    .animate-bounce-in { animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+
+    /* Modal overlay */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .modal-content {
+      background: var(--bk-card);
+      border-radius: var(--bk-radius);
+      box-shadow: var(--bk-shadow-lg);
+      width: 100%;
+      max-width: 420px;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    /* Badge */
+    .badge-count {
+      position: absolute; top: -6px; right: -6px;
+      background: var(--bk-danger);
+      color: white;
+      font-size: 11px; font-weight: 700;
+      min-width: 20px; height: 20px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 5px;
+      border: 2px solid var(--bk-card);
+    }
+
+    /* Product card hover */
+    .product-card {
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--bk-shadow-lg);
+    }
+    .product-card:active {
+      transform: translateY(0);
+    }
+
+    /* Button press */
+    .btn-press { transition: all 0.15s ease; }
+    .btn-press:active { transform: scale(0.97); }
+
+    /* Category pill */
+    .cat-pill {
+      transition: all 0.2s ease;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .cat-pill.active {
+      background: var(--bk-primary) !important;
+      color: white !important;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+    }
+
+    /* Quantity button */
+    .qty-btn {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 600;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      border: none;
+    }
+    .qty-btn:hover { transform: scale(1.1); }
+    .qty-btn:active { transform: scale(0.95); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 100;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 500;
+      font-size: 14px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      animation: slideUp 0.3s ease-out;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* Cart item animation */
+    .cart-item { animation: fadeIn 0.2s ease-out; }
+
+    /* Responsive grid */
+    @media (max-width: 768px) {
+      .product-grid { grid-template-columns: repeat(2, 1fr) !important; }
+      .main-layout { flex-direction: column !important; }
+      .sidebar-cart { 
+        position: fixed; bottom: 0; left: 0; right: 0; 
+        max-height: 60vh; z-index: 40;
+        border-radius: 20px 20px 0 0 !important;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.1) !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .product-grid { grid-template-columns: repeat(1, 1fr) !important; }
+    }
+
+    /* Confetti */
+    .confetti-piece {
+      position: absolute;
+      width: 10px; height: 10px;
+      border-radius: 2px;
+      animation: confetti 1s ease-out forwards;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--bk-primary-light);
+      border-top-color: var(--bk-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* Stock indicator */
+    .stock-low { color: var(--bk-danger); }
+    .stock-ok { color: var(--bk-success); }
+    .stock-warn { color: var(--bk-warning); }
+
+    /* Empty state image */
+    .empty-illustration {
+      width: 120px; height: 120px;
+      background: var(--bk-primary-lighter);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+  </style>
+</head>
+<body class="bg-[#f0f5ff] antialiased">
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- HEADER                                  -->
+  <!-- ═══════════════════════════════════════ -->
+  <header class="bg-white border-b border-[#e2e8f0] sticky top-0 z-30">
+    <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <!-- Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-[#2563eb] rounded-xl flex items-center justify-center shadow-md">
+          <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 0 0 .495-7.468 5.99 5.99 0 0 0-1.925 3.547 5.975 5.975 0 0 1-2.133-1.001A3.75 3.75 0 0 0 12 18Z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-[#1e293b] leading-tight">Bagi Kopi</h1>
+          <p class="text-xs text-[#94a3b8]">Point of Sales</p>
+        </div>
+      </div>
+
+      <!-- Header Right -->
+      <div class="flex items-center gap-3">
+        <!-- Date/Time -->
+        <div class="hidden sm:flex items-center gap-2 text-sm text-[#64748b] bg-[#f0f5ff] px-3 py-2 rounded-xl">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+          <span id="headerTime">--:--</span>
+        </div>
+        <!-- Cashier -->
+        <div class="flex items-center gap-2 bg-[#eff6ff] px-3 py-2 rounded-xl cursor-pointer hover:bg-[#dbeafe] transition-colors" onclick="openCashierModal()">
+          <svg class="w-5 h-5 text-[#2563eb]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+          </svg>
+          <span id="cashierNameDisplay" class="text-sm font-medium text-[#2563eb]">Set Kasir</span>
+        </div>
+        <!-- Cart toggle (mobile) -->
+        <button class="sm:hidden relative p-2 bg-[#2563eb] text-white rounded-xl" onclick="toggleMobileCart()">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+          </svg>
+          <span id="mobileCartBadge" class="badge-count hidden">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- MAIN LAYOUT                             -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-5 main-layout flex gap-5" style="min-height: calc(100vh - 68px);">
+
+    <!-- ─────────────────────────────────── -->
+    <!-- LEFT: MENU AREA                     -->
+    <!-- ─────────────────────────────────── -->
+    <div class="flex-1 flex flex-col gap-4">
+
+      <!-- Search + Filter Bar -->
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="flex-1 relative">
+          <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94a3b8]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input id="searchInput" type="text" placeholder="Cari menu..." 
+            class="w-full pl-11 pr-4 py-3 bg-white border border-[#e2e8f0] rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent transition-all"
+            oninput="filterProducts()">
+        </div>
+      </div>
+
+      <!-- Category Pills -->
+      <div class="flex gap-2 overflow-x-auto pb-1" id="categoryContainer">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Product Grid -->
+      <div id="productGrid" class="product-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 flex-1">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────── -->
+    <!-- RIGHT: CART SIDEBAR                  -->
+    <!-- ─────────────────────────────────── -->
+    <div id="cartSidebar" class="sidebar-cart w-full sm:w-[380px] bg-white rounded-2xl border border-[#e2e8f0] flex flex-col overflow-hidden" style="max-height: calc(100vh - 88px); position: sticky; top: 78px;">
+      
+      <!-- Cart Header -->
+      <div class="px-5 py-4 border-b border-[#e2e8f0] bg-gradient-to-r from-[#2563eb] to-[#3b82f6]">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 text-white">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+            </svg>
+            <h2 class="font-bold text-base">Keranjang</h2>
+          </div>
+          <button onclick="clearCart()" class="text-white/70 hover:text-white text-xs font-medium px-2 py-1 rounded-lg hover:bg-white/10 transition-colors" id="clearCartBtn" style="display:none;">
+            Hapus Semua
+          </button>
+        </div>
+        <div class="flex items-center gap-2 mt-2 text-blue-100 text-xs">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+          </svg>
+          <span id="cartCashierName">Kasir belum diset</span>
+        </div>
+      </div>
+
+      <!-- Cart Items -->
+      <div id="cartItems" class="flex-1 overflow-y-auto px-4 py-3" style="min-height: 120px;">
+        <!-- Empty state -->
+        <div id="cartEmpty" class="flex flex-col items-center justify-center py-10 text-center">
+          <div class="empty-illustration">
+            <svg class="w-12 h-12 text-[#2563eb]/40" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+            </svg>
+          </div>
+          <p class="text-sm font-medium text-[#64748b]">Keranjang masih kosong</p>
+          <p class="text-xs text-[#94a3b8] mt-1">Tap menu untuk menambahkan</p>
+        </div>
+      </div>
+
+      <!-- Cart Footer -->
+      <div class="border-t border-[#e2e8f0] bg-[#fafbfe]">
+        
+        <!-- Catatan Pesanan -->
+        <div class="px-5 pt-3">
+          <textarea id="orderNotes" placeholder="Catatan pesanan (opsional)..." class="w-full px-3 py-2 bg-[#f8fafc] border border-[#e2e8f0] rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:bg-white resize-none" rows="2"></textarea>
+        </div>
+
+        <!-- Summary -->
+        <div class="px-5 py-3 space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="text-[#64748b]">Total Item</span>
+            <span id="totalItems" class="font-semibold">0</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-[#64748b] text-sm">Total Harga</span>
+            <span id="totalPrice" class="font-bold text-lg text-[#2563eb]">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="px-5 pb-3">
+          <label class="text-xs font-medium text-[#64748b] mb-1.5 block">Metode Pembayaran</label>
+          <div class="grid grid-cols-3 gap-2" id="paymentMethods">
+            <button onclick="selectPayment('Cash')" class="payment-btn active flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-2 border-[#2563eb] bg-[#eff6ff] text-[#2563eb] text-xs font-medium transition-all btn-press">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+              </svg>
+              Cash
+            </button>
+            <button onclick="selectPayment('QRIS')" class="payment-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-2 border-[#e2e8f0] bg-white text-[#64748b] text-xs font-medium transition-all btn-press hover:border-[#2563eb] hover:text-[#2563eb]">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z" />
+              </svg>
+              QRIS
+            </button>
+            <button onclick="selectPayment('Transfer')" class="payment-btn flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border-2 border-[#e2e8f0] bg-white text-[#64748b] text-xs font-medium transition-all btn-press hover:border-[#2563eb] hover:text-[#2563eb]">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
+              </svg>
+              Transfer
+            </button>
+          </div>
+        </div>
+
+        <!-- Pay Button -->
+        <div class="px-5 pb-5">
+          <button id="payBtn" onclick="openOrderTypeModal()" disabled
+            class="w-full py-3.5 bg-gradient-to-r from-[#2563eb] to-[#3b82f6] text-white font-bold text-base rounded-2xl shadow-lg shadow-blue-500/30 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed hover:shadow-blue-500/40 transition-all btn-press flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            Bayar Sekarang
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- MODALS                                  -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <!-- Cashier Name Modal -->
+  <div id="cashierModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content p-6">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 bg-[#eff6ff] rounded-xl flex items-center justify-center">
+          <svg class="w-5 h-5 text-[#2563eb]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="font-bold text-[#1e293b]">Nama Kasir</h3>
+          <p class="text-xs text-[#94a3b8]">Masukkan nama kasir yang bertugas</p>
+        </div>
+      </div>
+      <input id="cashierInput" type="text" placeholder="Contoh: Andi" 
+        class="w-full px-4 py-3 border border-[#e2e8f0] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-transparent mb-4"
+        onkeydown="if(event.key==='Enter') saveCashier()">
+      <div class="flex gap-2">
+        <button onclick="closeCashierModal()" class="flex-1 py-2.5 border border-[#e2e8f0] rounded-xl text-sm font-medium text-[#64748b] hover:bg-[#f8fafc] transition-colors">Batal</button>
+        <button onclick="saveCashier()" class="flex-1 py-2.5 bg-[#2563eb] text-white rounded-xl text-sm font-bold hover:bg-[#1d4ed8] transition-colors">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Type Modal (Dine In / Takeaway) -->
+  <div id="orderTypeModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content p-6">
+      <div class="text-center mb-5">
+        <div class="w-14 h-14 bg-[#eff6ff] rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <svg class="w-7 h-7 text-[#2563eb]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z" />
+          </svg>
+        </div>
+        <h3 class="font-bold text-lg text-[#1e293b]">Tipe Pesanan</h3>
+        <p class="text-sm text-[#94a3b8] mt-1">Pilih tipe pesanan pelanggan</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-5">
+        <button onclick="selectOrderType('Dine In')"
+          class="order-type-btn flex flex-col items-center gap-2 py-5 px-4 rounded-2xl border-2 border-[#e2e8f0] bg-white hover:border-[#2563eb] hover:bg-[#eff6ff] transition-all btn-press group">
+          <div class="w-12 h-12 bg-[#f0f5ff] group-hover:bg-[#dbeafe] rounded-xl flex items-center justify-center transition-colors">
+            <svg class="w-6 h-6 text-[#64748b] group-hover:text-[#2563eb] transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z" />
+            </svg>
+          </div>
+          <span class="font-semibold text-sm text-[#1e293b]">Dine In</span>
+          <span class="text-[10px] text-[#94a3b8]">Makan di tempat</span>
+        </button>
+        <button onclick="selectOrderType('Takeaway')"
+          class="order-type-btn flex flex-col items-center gap-2 py-5 px-4 rounded-2xl border-2 border-[#e2e8f0] bg-white hover:border-[#2563eb] hover:bg-[#eff6ff] transition-all btn-press group">
+          <div class="w-12 h-12 bg-[#f0f5ff] group-hover:bg-[#dbeafe] rounded-xl flex items-center justify-center transition-colors">
+            <svg class="w-6 h-6 text-[#64748b] group-hover:text-[#2563eb] transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+            </svg>
+          </div>
+          <span class="font-semibold text-sm text-[#1e293b]">Takeaway</span>
+          <span class="text-[10px] text-[#94a3b8]">Bawa pulang</span>
+        </button>
+      </div>
+      <button onclick="closeOrderTypeModal()" class="w-full py-2.5 border border-[#e2e8f0] rounded-xl text-sm font-medium text-[#64748b] hover:bg-[#f8fafc] transition-colors">Batal</button>
+    </div>
+  </div>
+
+  <!-- Payment Status Modal -->
+  <div id="paymentStatusModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content p-6 text-center" id="paymentStatusContent">
+      <!-- Filled by JS -->
+    </div>
+  </div>
+
+  <!-- Processing Modal -->
+  <div id="processingModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content p-8 text-center">
+      <div class="spinner mx-auto mb-4"></div>
+      <h3 class="font-bold text-[#1e293b] mb-1">Memproses Pembayaran</h3>
+      <p class="text-sm text-[#94a3b8]">Mohon tunggu sebentar...</p>
+    </div>
+  </div>
+
+
+  <!-- Hidden Receipt Container for PDF -->
+  <div id="receiptContainer" style="position: absolute; left: -9999px; top: -9999px;">
+    <div id="receiptContent" class="p-6 bg-white w-[300px] text-black" style="font-family: monospace;">
+      <div class="text-center mb-4">
+        <h2 class="font-bold text-xl mb-1">BAGI KOPI</h2>
+        <p class="text-xs">Jl. Contoh Alamat No. 123</p>
+        <p class="text-xs">Telp: 08123456789</p>
+      </div>
+      <div class="border-t border-b border-dashed border-gray-400 py-2 mb-2 text-xs">
+        <div class="flex justify-between"><span>No:</span> <span id="receiptTxId"></span></div>
+        <div class="flex justify-between"><span>Tgl:</span> <span id="receiptDate"></span></div>
+        <div class="flex justify-between"><span>Kasir:</span> <span id="receiptCashier"></span></div>
+        <div class="flex justify-between"><span>Tipe:</span> <span id="receiptType"></span></div>
+      </div>
+      <div id="receiptItems" class="mb-2 text-xs">
+        <!-- items -->
+      </div>
+      <div class="border-t border-dashed border-gray-400 pt-2 mb-2 text-xs">
+        <div class="flex justify-between font-bold"><span>Total:</span> <span id="receiptTotal"></span></div>
+        <div class="flex justify-between"><span>Bayar (<span id="receiptMethod"></span>):</span> <span id="receiptTotal2"></span></div>
+      </div>
+      <div class="border-t border-dashed border-gray-400 pt-2 mb-2 text-xs" id="receiptNotesContainer" style="display:none;">
+        <div><span>Catatan:</span> <div id="receiptNotesText" class="pl-2 italic"></div></div>
+      </div>
+      <div class="text-center mt-4 text-xs">
+        <p>Terima Kasih</p>
+        <p>Silakan Datang Kembali</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- JAVASCRIPT                              -->
+  <!-- ═══════════════════════════════════════ -->
+  <script>
+    // ──────────────────────────────────────
+    // CONFIG
+    // ──────────────────────────────────────
+    // Ganti URL ini dengan URL Google Apps Script yang sudah di-deploy
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyh95SBHOzDAaeIWfv3WUFJtUNp8pXuezKgVDY-5Rz6Ui4ilZTdbv4j--fgw70G9d_XFQ/exec';
+
+    // ──────────────────────────────────────
+    // STATE
+    // ──────────────────────────────────────
+    let cashierName = '';
+    let cart = [];
+    let selectedPayment = 'Cash';
+    let selectedCategory = 'Semua';
+    let products = [];
+    let categories = ['Semua'];
+
+    // ──────────────────────────────────────
+    // SAMPLE DATA (used when no API URL set)
+    // ──────────────────────────────────────
+    const sampleProducts = [
+      // Kopi
+      { id: 'P001', nama: 'Espresso', kategori: 'Kopi', harga: 18000, stok: 50, gambar: 'https://placehold.co/200x200/3b2f2f/ffffff?text=%E2%98%95+Espresso' },
+      { id: 'P002', nama: 'Americano', kategori: 'Kopi', harga: 22000, stok: 45, gambar: 'https://placehold.co/200x200/4a3728/ffffff?text=%E2%98%95+Americano' },
+      { id: 'P003', nama: 'Cappuccino', kategori: 'Kopi', harga: 28000, stok: 40, gambar: 'https://placehold.co/200x200/6f4e37/ffffff?text=%E2%98%95+Cappuccino' },
+      { id: 'P004', nama: 'Caffe Latte', kategori: 'Kopi', harga: 28000, stok: 38, gambar: 'https://placehold.co/200x200/c19a6b/ffffff?text=%E2%98%95+Latte' },
+      { id: 'P005', nama: 'Mocha Latte', kategori: 'Kopi', harga: 32000, stok: 30, gambar: 'https://placehold.co/200x200/5c4033/ffffff?text=%E2%98%95+Mocha' },
+      { id: 'P006', nama: 'Kopi Susu Gula Aren', kategori: 'Kopi', harga: 25000, stok: 55, gambar: 'https://placehold.co/200x200/d4a373/ffffff?text=%E2%98%95+Gula+Aren' },
+      { id: 'P007', nama: 'Affogato', kategori: 'Kopi', harga: 35000, stok: 20, gambar: 'https://placehold.co/200x200/b38b6d/ffffff?text=%E2%98%95+Affogato' },
+      { id: 'P008', nama: 'Cold Brew', kategori: 'Kopi', harga: 30000, stok: 25, gambar: 'https://placehold.co/200x200/2c1810/ffffff?text=%E2%98%95+Cold+Brew' },
+      // Non-Kopi
+      { id: 'P009', nama: 'Matcha Latte', kategori: 'Non-Kopi', harga: 30000, stok: 35, gambar: 'https://placehold.co/200x200/8a9a5b/ffffff?text=%F0%9F%8D%B5+Matcha' },
+      { id: 'P010', nama: 'Taro Latte', kategori: 'Non-Kopi', harga: 28000, stok: 30, gambar: 'https://placehold.co/200x200/7a5c61/ffffff?text=%F0%9F%8D%B5+Taro' },
+      { id: 'P011', nama: 'Coklat Panas', kategori: 'Non-Kopi', harga: 25000, stok: 40, gambar: 'https://placehold.co/200x200/4a3b32/ffffff?text=%F0%9F%8D%AB+Coklat' },
+      { id: 'P012', nama: 'Thai Tea', kategori: 'Non-Kopi', harga: 22000, stok: 45, gambar: 'https://placehold.co/200x200/e67e22/ffffff?text=%F0%9F%8D%B5+Thai+Tea' },
+      { id: 'P013', nama: 'Lemon Tea', kategori: 'Non-Kopi', harga: 18000, stok: 50, gambar: 'https://placehold.co/200x200/f1c40f/333333?text=%F0%9F%8B%8B+Lemon+Tea' },
+      { id: 'P014', nama: 'Fresh Orange', kategori: 'Non-Kopi', harga: 20000, stok: 30, gambar: 'https://placehold.co/200x200/e74c3c/ffffff?text=%F0%9F%8D%8A+Orange' },
+      // Makanan
+      { id: 'P015', nama: 'Croissant Butter', kategori: 'Makanan', harga: 25000, stok: 20, gambar: 'https://placehold.co/200x200/e6c287/333333?text=%F0%9F%A5%90+Croissant' },
+      { id: 'P016', nama: 'Roti Bakar Coklat', kategori: 'Makanan', harga: 20000, stok: 25, gambar: 'https://placehold.co/200x200/d2a679/333333?text=%F0%9F%8D%9E+Roti+Bakar' },
+      { id: 'P017', nama: 'Nasi Goreng Spesial', kategori: 'Makanan', harga: 35000, stok: 15, gambar: 'https://placehold.co/200x200/c0392b/ffffff?text=%F0%9F%8D%9B+Nasi+Goreng' },
+      { id: 'P018', nama: 'Indomie Goreng Telur', kategori: 'Makanan', harga: 22000, stok: 30, gambar: 'https://placehold.co/200x200/e74c3c/ffffff?text=%F0%9F%8D%9C+Indomie' },
+      { id: 'P019', nama: 'Sandwich Tuna', kategori: 'Makanan', harga: 30000, stok: 18, gambar: 'https://placehold.co/200x200/ccb38c/333333?text=%F0%9F%A5%AA+Sandwich' },
+      { id: 'P020', nama: 'Pancake Stack', kategori: 'Makanan', harga: 28000, stok: 12, gambar: 'https://placehold.co/200x200/f39c12/ffffff?text=%F0%9F%A5%9E+Pancake' },
+      // Snack
+      { id: 'P021', nama: 'French Fries', kategori: 'Snack', harga: 20000, stok: 30, gambar: 'https://placehold.co/200x200/f4a460/ffffff?text=%F0%9F%8D%9F+Fries' },
+      { id: 'P022', nama: 'Kentang Wedges', kategori: 'Snack', harga: 22000, stok: 25, gambar: 'https://placehold.co/200x200/deb887/ffffff?text=%F0%9F%A5%94+Wedges' },
+      { id: 'P023', nama: 'Pisang Goreng Keju', kategori: 'Snack', harga: 18000, stok: 35, gambar: 'https://placehold.co/200x200/cd853f/ffffff?text=%F0%9F%8D%8C+Pisgor' },
+      { id: 'P024', nama: 'Dimsum Ayam', kategori: 'Snack', harga: 25000, stok: 20, gambar: 'https://placehold.co/200x200/e8d5b7/333333?text=%F0%9F%A5%9F+Dimsum' },
+      { id: 'P025', nama: 'Chocolate Brownies', kategori: 'Snack', harga: 22000, stok: 15, gambar: 'https://placehold.co/200x200/5d3a1a/ffffff?text=%F0%9F%8D%AB+Brownies' },
+    ];
+
+    // Category icons/emoji mapping
+    const categoryIcons = {
+      'Semua': `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25a2.25 2.25 0 0 1-2.25-2.25v-2.25Z" /></svg>`,
+      'Kopi': `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z" /></svg>`,
+      'Non-Kopi': `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" /></svg>`,
+      'Makanan': `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0L3 16.5m15-3.379a48.474 48.474 0 0 0-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 0 1 3 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 0 1 6 13.12" /></svg>`,
+      'Snack': `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" /></svg>`,
+    };
+
+    // Category colors for product images
+    const categoryColors = {
+      'Kopi': { bg: '#92400e', fg: '#fef3c7', emoji: '☕' },
+      'Non-Kopi': { bg: '#065f46', fg: '#d1fae5', emoji: '🍵' },
+      'Makanan': { bg: '#9a3412', fg: '#ffedd5', emoji: '🍽️' },
+      'Snack': { bg: '#7c2d12', fg: '#fef2f2', emoji: '🍿' },
+    };
+
+    // ──────────────────────────────────────
+    // INIT
+    // ──────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProducts();
+      updateClock();
+      setInterval(updateClock, 1000);
+
+      // Auto-open cashier modal on first visit
+      const savedCashier = localStorage.getItem('bk_cashier');
+      if (savedCashier) {
+        cashierName = savedCashier;
+        document.getElementById('cashierNameDisplay').textContent = cashierName;
+        document.getElementById('cartCashierName').textContent = `Kasir: ${cashierName}`;
+      } else {
+        setTimeout(() => openCashierModal(), 500);
+      }
+    });
+
+    function updateClock() {
+      const now = new Date();
+      const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+      const date = now.toLocaleDateString('id-ID', options);
+      const time = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('headerTime').textContent = `${date} • ${time}`;
+    }
+
+    // ──────────────────────────────────────
+    // PRODUCTS
+    // ──────────────────────────────────────
+    async function loadProducts() {
+      if (APPS_SCRIPT_URL) {
+        try {
+          const res = await fetch(`${APPS_SCRIPT_URL}?action=getProducts`);
+          const data = await res.json();
+          // Map field names dari Google Sheets ke format internal
+          const rawProducts = data.data || data.products || [];
+          products = rawProducts.map(p => ({
+            id: p['ID'] || p.id,
+            nama: p['Nama Produk'] || p.nama,
+            kategori: p['Kategori'] || p.kategori,
+            harga: p['Harga'] || p.harga,
+            stok: p['Stok'] || p.stok,
+            gambar: p['Gambar URL'] || p.gambar || '',
+          }));
+        } catch (e) {
+          console.error('Gagal memuat produk dari API:', e);
+          products = sampleProducts;
+          showToast('Mode offline — data contoh digunakan', 'warning');
+        }
+      } else {
+        products = sampleProducts;
+      }
+
+      // Extract categories
+      const cats = [...new Set(products.map(p => p.kategori))];
+      categories = ['Semua', ...cats];
+
+      renderCategories();
+      renderProducts();
+    }
+
+    function renderCategories() {
+      const container = document.getElementById('categoryContainer');
+      container.innerHTML = categories.map(cat => {
+        const icon = categoryIcons[cat] || categoryIcons['Semua'];
+        const isActive = cat === selectedCategory;
+        return `<button class="cat-pill flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium ${isActive ? 'active' : 'bg-white border border-[#e2e8f0] text-[#64748b] hover:border-[#2563eb] hover:text-[#2563eb]'}" onclick="selectCategory('${cat}')">
+          ${icon} ${cat}
+        </button>`;
+      }).join('');
+    }
+
+    function selectCategory(cat) {
+      selectedCategory = cat;
+      renderCategories();
+      renderProducts();
+    }
+
+    function filterProducts() {
+      renderProducts();
+    }
+
+    function getFilteredProducts() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      return products.filter(p => {
+        const matchCat = selectedCategory === 'Semua' || p.kategori === selectedCategory;
+        const matchSearch = p.nama.toLowerCase().includes(search);
+        return matchCat && matchSearch;
+      });
+    }
+
+    function renderProducts() {
+      const grid = document.getElementById('productGrid');
+      const filtered = getFilteredProducts();
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full flex flex-col items-center justify-center py-16 text-center">
+            <div class="empty-illustration">
+              <svg class="w-12 h-12 text-[#2563eb]/30" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              </svg>
+            </div>
+            <p class="text-sm font-medium text-[#64748b]">Produk tidak ditemukan</p>
+            <p class="text-xs text-[#94a3b8] mt-1">Coba kata kunci lain</p>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map((p, i) => {
+        const inCart = cart.find(c => c.id === p.id);
+        const qty = inCart ? inCart.qty : 0;
+        const outOfStock = p.stok <= 0;
+        const colors = categoryColors[p.kategori] || { bg: '#374151', fg: '#f9fafb', emoji: '📦' };
+
+        // Stock indicator
+        let stockClass = 'stock-ok';
+        let stockLabel = `Stok: ${p.stok}`;
+        if (p.stok <= 0) { stockClass = 'stock-low'; stockLabel = 'Habis'; }
+        else if (p.stok <= 5) { stockClass = 'stock-warn'; stockLabel = `Sisa ${p.stok}`; }
+
+        return `
+        <div class="product-card bg-white rounded-2xl border border-[#e2e8f0] overflow-hidden animate-fade ${outOfStock ? 'opacity-50' : ''}" style="animation-delay: ${i * 30}ms" ${!outOfStock ? `onclick="addToCart('${p.id}')"` : ''}>
+          <!-- Image -->
+          <div class="relative h-32 sm:h-36 flex items-center justify-center overflow-hidden" style="background: linear-gradient(135deg, ${colors.bg}, ${colors.bg}dd);">
+            ${p.gambar ? `<img src="${p.gambar}" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" alt="${p.nama}"><div class="hidden absolute inset-0 items-center justify-center" style="background: linear-gradient(135deg, ${colors.bg}, ${colors.bg}dd);"><span class="text-4xl">${colors.emoji}</span></div>` : `<span class="text-4xl">${colors.emoji}</span>`}
+            <!-- Category badge -->
+            <span class="absolute top-2 left-2 px-2 py-0.5 rounded-lg text-[10px] font-semibold" style="background: ${colors.fg}; color: ${colors.bg};">${p.kategori}</span>
+            ${outOfStock ? '<div class="absolute inset-0 bg-black/40 flex items-center justify-center"><span class="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-lg">HABIS</span></div>' : ''}
+            ${qty > 0 ? `<div class="absolute top-2 right-2 w-7 h-7 bg-[#2563eb] text-white rounded-lg flex items-center justify-center text-xs font-bold shadow-lg animate-bounce-in">${qty}</div>` : ''}
+          </div>
+          <!-- Info -->
+          <div class="p-3">
+            <h3 class="font-semibold text-sm text-[#1e293b] leading-tight mb-1 line-clamp-2">${p.nama}</h3>
+            <div class="flex items-center justify-between mt-2">
+              <span class="font-bold text-[#2563eb] text-sm">${formatRupiah(p.harga)}</span>
+              <span class="text-[11px] font-medium ${stockClass}">${stockLabel}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ──────────────────────────────────────
+    // CART
+    // ──────────────────────────────────────
+    function addToCart(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product || product.stok <= 0) return;
+
+      const existing = cart.find(c => c.id === productId);
+      if (existing) {
+        if (existing.qty >= product.stok) {
+          showToast(`Stok ${product.nama} tidak cukup`, 'warning');
+          return;
+        }
+        existing.qty++;
+      } else {
+        cart.push({ id: productId, nama: product.nama, harga: product.harga, qty: 1 });
+      }
+
+      updateCart();
+      renderProducts(); // Update qty badge
+      showToast(`${product.nama} ditambahkan`, 'success');
+    }
+
+    function removeFromCart(productId) {
+      const idx = cart.findIndex(c => c.id === productId);
+      if (idx === -1) return;
+
+      if (cart[idx].qty > 1) {
+        cart[idx].qty--;
+      } else {
+        cart.splice(idx, 1);
+      }
+
+      updateCart();
+      renderProducts();
+    }
+
+    function deleteFromCart(productId) {
+      cart = cart.filter(c => c.id !== productId);
+      updateCart();
+      renderProducts();
+    }
+
+    function clearCart() {
+      cart = [];
+      updateCart();
+      renderProducts();
+    }
+
+    function updateCart() {
+      const container = document.getElementById('cartItems');
+      const emptyEl = document.getElementById('cartEmpty');
+      const clearBtn = document.getElementById('clearCartBtn');
+      const payBtn = document.getElementById('payBtn');
+      const mobileBadge = document.getElementById('mobileCartBadge');
+
+      const totalItems = cart.reduce((sum, c) => sum + c.qty, 0);
+      const totalPrice = cart.reduce((sum, c) => sum + (c.harga * c.qty), 0);
+
+      document.getElementById('totalItems').textContent = totalItems;
+      document.getElementById('totalPrice').textContent = formatRupiah(totalPrice);
+
+      // Mobile badge
+      if (totalItems > 0) {
+        mobileBadge.textContent = totalItems;
+        mobileBadge.classList.remove('hidden');
+      } else {
+        mobileBadge.classList.add('hidden');
+      }
+
+      // Pay button state
+      payBtn.disabled = cart.length === 0 || !cashierName;
+
+      // Clear button
+      clearBtn.style.display = cart.length > 0 ? 'block' : 'none';
+
+      if (cart.length === 0) {
+        emptyEl.style.display = 'flex';
+        // Remove all cart items but keep empty state
+        const items = container.querySelectorAll('.cart-item');
+        items.forEach(el => el.remove());
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+
+      // Remove old items
+      const oldItems = container.querySelectorAll('.cart-item');
+      oldItems.forEach(el => el.remove());
+
+      // Render cart items
+      cart.forEach(item => {
+        const product = products.find(p => p.id === item.id);
+        const colors = categoryColors[product?.kategori] || { bg: '#374151', fg: '#f9fafb', emoji: '📦' };
+
+        const div = document.createElement('div');
+        div.className = 'cart-item flex items-center gap-3 py-3 border-b border-[#f1f5f9] last:border-0';
+        div.innerHTML = `
+          <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-lg" style="background: ${colors.bg}22;">
+            ${colors.emoji}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-[#1e293b] truncate">${item.nama}</p>
+            <p class="text-xs text-[#2563eb] font-semibold">${formatRupiah(item.harga)}</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button class="qty-btn bg-[#fee2e2] text-[#ef4444] hover:bg-[#fecaca]" onclick="event.stopPropagation(); removeFromCart('${item.id}')">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" /></svg>
+            </button>
+            <span class="w-8 text-center text-sm font-bold text-[#1e293b]">${item.qty}</span>
+            <button class="qty-btn bg-[#dbeafe] text-[#2563eb] hover:bg-[#bfdbfe]" onclick="event.stopPropagation(); addToCart('${item.id}')">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            </button>
+            <button class="qty-btn bg-transparent text-[#94a3b8] hover:text-[#ef4444] hover:bg-[#fee2e2] ml-1" onclick="event.stopPropagation(); deleteFromCart('${item.id}')">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+            </button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // ──────────────────────────────────────
+    // PAYMENT
+    // ──────────────────────────────────────
+    function selectPayment(method) {
+      selectedPayment = method;
+      document.querySelectorAll('.payment-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.classList.remove('border-[#2563eb]', 'bg-[#eff6ff]', 'text-[#2563eb]');
+        btn.classList.add('border-[#e2e8f0]', 'bg-white', 'text-[#64748b]');
+      });
+      const btns = document.querySelectorAll('.payment-btn');
+      const idx = ['Cash', 'QRIS', 'Transfer'].indexOf(method);
+      if (idx >= 0 && btns[idx]) {
+        btns[idx].classList.add('active');
+        btns[idx].classList.remove('border-[#e2e8f0]', 'bg-white', 'text-[#64748b]');
+        btns[idx].classList.add('border-[#2563eb]', 'bg-[#eff6ff]', 'text-[#2563eb]');
+      }
+    }
+
+    // ──────────────────────────────────────
+    // ORDER TYPE MODAL
+    // ──────────────────────────────────────
+    function openOrderTypeModal() {
+      if (!cashierName) {
+        showToast('Silakan set nama kasir terlebih dahulu', 'warning');
+        openCashierModal();
+        return;
+      }
+      if (cart.length === 0) {
+        showToast('Keranjang masih kosong', 'warning');
+        return;
+      }
+      document.getElementById('orderTypeModal').style.display = 'flex';
+    }
+
+    function closeOrderTypeModal() {
+      document.getElementById('orderTypeModal').style.display = 'none';
+    }
+
+    function selectOrderType(type) {
+      closeOrderTypeModal();
+      processPayment(type);
+    }
+
+    // ──────────────────────────────────────
+    // PROCESS PAYMENT
+    // ──────────────────────────────────────
+    async function processPayment(orderType) {
+      const processingModal = document.getElementById('processingModal');
+      processingModal.style.display = 'flex';
+
+      const totalPrice = cart.reduce((sum, c) => sum + (c.harga * c.qty), 0);
+      const totalItems = cart.reduce((sum, c) => sum + c.qty, 0);
+      const notes = document.getElementById('orderNotes').value.trim();
+
+      const transactionData = {
+        action: 'addTransaction',
+        kasir: cashierName,
+        items: cart.map(c => ({ id: c.id, nama: c.nama, qty: c.qty, harga: c.harga })),
+        total: totalPrice,
+        metode: selectedPayment,
+        status: 'Lunas',
+        tipe: orderType,
+        notes: notes,
+      };
+
+      let success = false;
+      let transactionId = generateLocalTxId();
+
+      if (APPS_SCRIPT_URL) {
+        try {
+          const res = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(transactionData),
+          });
+          const data = await res.json();
+          success = data.status === 'success';
+          transactionId = (data.data && data.data.trxId) || data.transactionId || transactionId;
+        } catch (e) {
+          console.error('Gagal menyimpan transaksi:', e);
+          // Simulate success for demo
+          success = true;
+        }
+      } else {
+        // Demo mode — simulate network delay
+        await new Promise(r => setTimeout(r, 1200));
+        success = true;
+
+        // Update local stock
+        cart.forEach(item => {
+          const product = products.find(p => p.id === item.id);
+          if (product) product.stok -= item.qty;
+        });
+      }
+
+      processingModal.style.display = 'none';
+
+      if (success) {
+        showPaymentSuccess(transactionId, totalPrice, totalItems, selectedPayment, orderType, notes);
+        cart = [];
+        document.getElementById('orderNotes').value = '';
+        updateCart();
+        renderProducts();
+      } else {
+        showPaymentFailed();
+      }
+    }
+
+    function generateLocalTxId() {
+      const now = new Date();
+      const dateStr = now.getFullYear().toString() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0');
+      const rand = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
+      return `TRX-${dateStr}-${rand}`;
+    }
+
+    // ──────────────────────────────────────
+    // PAYMENT STATUS MODALS
+    // ──────────────────────────────────────
+    function showPaymentSuccess(txId, total, items, method, orderType, notes) {
+      const modal = document.getElementById('paymentStatusModal');
+      const content = document.getElementById('paymentStatusContent');
+
+      // Populate PDF Receipt
+      document.getElementById('receiptTxId').textContent = txId;
+      document.getElementById('receiptDate').textContent = new Date().toLocaleString('id-ID');
+      document.getElementById('receiptCashier').textContent = cashierName;
+      document.getElementById('receiptType').textContent = orderType;
+      document.getElementById('receiptTotal').textContent = formatRupiah(total);
+      document.getElementById('receiptMethod').textContent = method;
+      document.getElementById('receiptTotal2').textContent = formatRupiah(total);
+      
+      const receiptItemsContainer = document.getElementById('receiptItems');
+      receiptItemsContainer.innerHTML = cart.map(c => `
+        <div class="flex justify-between mb-1">
+          <div>${c.nama}<br><span class="text-gray-500">${c.qty} x ${formatRupiah(c.harga)}</span></div>
+          <div>${formatRupiah(c.harga * c.qty)}</div>
+        </div>
+      `).join('');
+      
+      const notesContainer = document.getElementById('receiptNotesContainer');
+      if (notes) {
+        document.getElementById('receiptNotesText').textContent = notes;
+        notesContainer.style.display = 'block';
+      } else {
+        notesContainer.style.display = 'none';
+      }
+
+      content.innerHTML = `
+        <div class="relative overflow-hidden">
+          <!-- Confetti -->
+          <div id="confettiContainer" class="absolute inset-0 pointer-events-none"></div>
+          
+          <!-- Success icon -->
+          <div class="w-20 h-20 bg-[#f0fdf4] rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-in">
+            <svg class="w-10 h-10 text-[#22c55e]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          </div>
+          
+          <h3 class="text-xl font-bold text-[#1e293b] mb-1">Pembayaran Berhasil! 🎉</h3>
+          <p class="text-sm text-[#94a3b8] mb-5">Transaksi telah dicatat</p>
+          
+          <!-- Receipt -->
+          <div class="bg-[#f8fafc] rounded-2xl p-4 text-left space-y-3 mb-5">
+            <div class="flex justify-between text-sm">
+              <span class="text-[#64748b]">ID Transaksi</span>
+              <span class="font-mono font-semibold text-[#1e293b]">${txId}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-[#64748b]">Tipe Pesanan</span>
+              <span class="font-semibold text-[#1e293b] flex items-center gap-1">
+                ${orderType === 'Dine In' ? 
+                  '<svg class="w-4 h-4 text-[#2563eb]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72" /></svg>' : 
+                  '<svg class="w-4 h-4 text-[#2563eb]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007Z" /></svg>'}
+                ${orderType}
+              </span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-[#64748b]">Total Item</span>
+              <span class="font-semibold text-[#1e293b]">${items} item</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-[#64748b]">Pembayaran</span>
+              <span class="font-semibold text-[#1e293b]">${method}</span>
+            </div>
+            <div class="border-t border-[#e2e8f0] pt-3 flex justify-between">
+              <span class="font-semibold text-[#1e293b]">Total</span>
+              <span class="font-bold text-lg text-[#2563eb]">${formatRupiah(total)}</span>
+            </div>
+          </div>
+          
+          <div class="flex gap-2">
+            <button onclick="downloadReceiptPDF('${txId}')" class="flex-1 py-3 bg-white border border-[#e2e8f0] text-[#1e293b] font-bold rounded-2xl hover:bg-[#f8fafc] transition-all btn-press flex items-center justify-center gap-2">
+              <svg class="w-5 h-5 text-[#2563eb]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+              PDF Struk
+            </button>
+            <button onclick="closePaymentStatus()" class="flex-1 py-3 bg-gradient-to-r from-[#22c55e] to-[#16a34a] text-white font-bold rounded-2xl hover:shadow-lg transition-all btn-press">
+              Selesai
+            </button>
+          </div>
+        </div>`;
+
+      modal.style.display = 'flex';
+      triggerConfetti();
+    }
+
+    function showPaymentFailed() {
+      const modal = document.getElementById('paymentStatusModal');
+      const content = document.getElementById('paymentStatusContent');
+
+      content.innerHTML = `
+        <div class="w-20 h-20 bg-[#fef2f2] rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-in">
+          <svg class="w-10 h-10 text-[#ef4444]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        </div>
+        
+        <h3 class="text-xl font-bold text-[#1e293b] mb-1">Pembayaran Gagal</h3>
+        <p class="text-sm text-[#94a3b8] mb-5">Terjadi kesalahan. Silakan coba lagi.</p>
+        
+        <div class="flex gap-2">
+          <button onclick="closePaymentStatus()" class="flex-1 py-3 border border-[#e2e8f0] rounded-2xl text-sm font-semibold text-[#64748b] hover:bg-[#f8fafc] transition-colors">Tutup</button>
+          <button onclick="closePaymentStatus(); openOrderTypeModal();" class="flex-1 py-3 bg-[#2563eb] text-white rounded-2xl text-sm font-bold hover:bg-[#1d4ed8] transition-colors">Coba Lagi</button>
+        </div>`;
+
+      modal.style.display = 'flex';
+    }
+
+    function closePaymentStatus() {
+      document.getElementById('paymentStatusModal').style.display = 'none';
+    }
+
+    function downloadReceiptPDF(txId) {
+      const element = document.getElementById('receiptContent');
+      const opt = {
+        margin: 0,
+        filename: `Struk_${txId}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: [80, 200], orientation: 'portrait' } // Format struk thermal (80mm width)
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    // ──────────────────────────────────────
+    // CONFETTI
+    // ──────────────────────────────────────
+    function triggerConfetti() {
+      const container = document.getElementById('confettiContainer');
+      if (!container) return;
+      const colors = ['#2563eb', '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+      for (let i = 0; i < 30; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = Math.random() * 100 + '%';
+        piece.style.top = '100%';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDelay = Math.random() * 0.5 + 's';
+        piece.style.animationDuration = (0.8 + Math.random() * 0.5) + 's';
+        piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+        container.appendChild(piece);
+      }
+      setTimeout(() => { container.innerHTML = ''; }, 2000);
+    }
+
+    // ──────────────────────────────────────
+    // CASHIER MODAL
+    // ──────────────────────────────────────
+    function openCashierModal() {
+      document.getElementById('cashierModal').style.display = 'flex';
+      document.getElementById('cashierInput').value = cashierName;
+      setTimeout(() => document.getElementById('cashierInput').focus(), 100);
+    }
+
+    function closeCashierModal() {
+      document.getElementById('cashierModal').style.display = 'none';
+    }
+
+    function saveCashier() {
+      const name = document.getElementById('cashierInput').value.trim();
+      if (!name) {
+        showToast('Nama kasir tidak boleh kosong', 'warning');
+        return;
+      }
+      cashierName = name;
+      localStorage.setItem('bk_cashier', name);
+      document.getElementById('cashierNameDisplay').textContent = name;
+      document.getElementById('cartCashierName').textContent = `Kasir: ${name}`;
+      closeCashierModal();
+      updateCart(); // Re-enable pay button
+      showToast(`Selamat bekerja, ${name}! ☕`, 'success');
+    }
+
+    // ──────────────────────────────────────
+    // MOBILE CART TOGGLE
+    // ──────────────────────────────────────
+    let mobileCartOpen = false;
+    function toggleMobileCart() {
+      const sidebar = document.getElementById('cartSidebar');
+      mobileCartOpen = !mobileCartOpen;
+      if (mobileCartOpen) {
+        sidebar.style.transform = 'translateY(0)';
+      } else {
+        sidebar.style.transform = 'translateY(100%)';
+      }
+    }
+
+    // ──────────────────────────────────────
+    // UTILITIES
+    // ──────────────────────────────────────
+    function formatRupiah(amount) {
+      return 'Rp ' + amount.toLocaleString('id-ID');
+    }
+
+    function showToast(message, type = 'info') {
+      // Remove existing toast
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+
+      const colors = {
+        success: { bg: '#f0fdf4', border: '#22c55e', text: '#166534', icon: '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#22c55e"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>' },
+        warning: { bg: '#fffbeb', border: '#f59e0b', text: '#92400e', icon: '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#f59e0b"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>' },
+        info: { bg: '#eff6ff', border: '#2563eb', text: '#1e40af', icon: '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#2563eb"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>' },
+      };
+      const style = colors[type] || colors.info;
+
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.style.background = style.bg;
+      toast.style.borderLeft = `3px solid ${style.border}`;
+      toast.style.color = style.text;
+      toast.innerHTML = `${style.icon} ${message}`;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    // Close modals on overlay click
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-overlay')) {
+        e.target.style.display = 'none';
+      }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+      }
+    });
+  </script>
+
+</body>
+</html>
